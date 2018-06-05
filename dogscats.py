@@ -1,13 +1,10 @@
 import os
-import numpy as np
-from keras.preprocessing.image import ImageDataGenerator
-from keras.preprocessing import image
-from keras.layers import Dropout, Flatten, Dense
+
 from keras.applications import ResNet50
-from keras.models import Model, Sequential
-from keras.layers import Dense, GlobalAveragePooling2D
-from keras import backend as K
 from keras.applications.resnet50 import preprocess_input
+from keras.layers import Dense, GlobalAveragePooling2D
+from keras.models import Model
+from keras.preprocessing.image import ImageDataGenerator
 
 PATH = "data/dogscats/"
 sz = 224
