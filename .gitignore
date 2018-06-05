@@ -1,0 +1,9 @@
+# OS X Junk
+.DS_Store
+
+# Ignore python virtual environments
+env
+
+# Pycharm workspace
+.idea
+
