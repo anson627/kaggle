@@ -8,11 +8,11 @@ from tqdm import tqdm
 import keras
 from keras.applications.vgg19 import VGG19
 from keras.models import Model
-from keras.layers import Dense, Dropout, Flatten
+from keras.layers import Dense, Flatten
 from sklearn.model_selection import train_test_split
 
 PATH = "data/dogbreed/"
-img_size = 90
+img_size = 299
 batch_size = 64
 
 df_train = pd.read_csv(os.path.join(PATH, 'labels.csv'))
@@ -44,8 +44,7 @@ x_test = np.array(x_test, np.float32) / 255.
 num_class = y_train_raw.shape[1]
 X_train, X_valid, Y_train, Y_valid = train_test_split(x_train_raw, y_train_raw, test_size=0.3, random_state=1)
 
-base_model = VGG19(#weights='imagenet',
-    weights = None, include_top=False, input_shape=(img_size, img_size, 3))
+base_model = VGG19(weights='imagenet', include_top=False, input_shape=(img_size, img_size, 3))
 
 # Add a new top layer
 x = base_model.output
