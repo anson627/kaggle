@@ -1,60 +1,65 @@
 import os
-import cv2
+import shutil
+from shutil import copyfile
 
-import numpy as np
 import pandas as pd
-from tqdm import tqdm
 
-import keras
-from keras.applications.vgg19 import VGG19
-from keras.models import Model
-from keras.layers import Dense, Flatten
 from sklearn.model_selection import train_test_split
+from keras.applications import ResNet50
+from keras.applications.resnet50 import preprocess_input
+from keras.layers import Dense, GlobalAveragePooling2D
+from keras.models import Model
+from keras.preprocessing.image import ImageDataGenerator
 
 PATH = "data/dogbreed/"
-img_size = 299
+train_data_dir = os.path.join(PATH, 'tmp', 'train')
+validation_data_dir = os.path.join(PATH, 'tmp', 'valid')
+
+sz = 224
 batch_size = 64
 
-df_train = pd.read_csv(os.path.join(PATH, 'labels.csv'))
-df_test = pd.read_csv(os.path.join(PATH, 'sample_submission.csv'))
+label_csv = pd.read_csv(os.path.join(PATH, 'labels.csv'))
+test_csv = pd.read_csv(os.path.join(PATH, 'sample_submission.csv'))
 
-targets_series = pd.Series(df_train['breed'])
-one_hot = pd.get_dummies(targets_series, sparse=True)
-one_hot_labels = np.asarray(one_hot)
+train_csv, valid_csv = train_test_split(label_csv, test_size=0.2, random_state=1)
 
-x_train = []
-y_train = []
-x_test = []
-i = 0
-for f, breed in tqdm(df_train.values):
-    img = cv2.imread(os.path.join(PATH, 'train/{}.jpg'.format(f)))
-    label = one_hot_labels[i]
-    x_train.append(cv2.resize(img, (img_size, img_size)))
-    y_train.append(label)
-    i += 1
 
-for f in tqdm(df_test['id'].values):
-    img = cv2.imread(os.path.join(PATH, 'test/{}.jpg'.format(f)))
-    x_test.append(cv2.resize(img, (img_size, img_size)))
+def copy_data(data_dir, data_csv):
+    shutil.rmtree(data_dir)
+    os.mkdir(data_dir)
+    for id, label in data_csv.values:
+        dir = os.path.join(data_dir, label)
+        name = id + '.jpg'
+        if not os.path.exists(dir):
+            os.mkdir(dir)
+        copyfile(os.path.join(PATH, 'train', name), os.path.join(dir, name))
 
-y_train_raw = np.array(y_train, np.uint8)
-x_train_raw = np.array(x_train, np.float32) / 255.
-x_test = np.array(x_test, np.float32) / 255.
 
-num_class = y_train_raw.shape[1]
-X_train, X_valid, Y_train, Y_valid = train_test_split(x_train_raw, y_train_raw, test_size=0.3, random_state=1)
+copy_data(train_data_dir, train_csv)
+copy_data(validation_data_dir, valid_csv)
 
-base_model = VGG19(weights='imagenet', include_top=False, input_shape=(img_size, img_size, 3))
+train_datagen = ImageDataGenerator(preprocessing_function=preprocess_input,
+    shear_range=0.2, zoom_range=0.2, horizontal_flip=True)
 
-# Add a new top layer
+test_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
+
+train_generator = train_datagen.flow_from_directory(train_data_dir,
+    target_size=(sz, sz),
+    batch_size=batch_size, class_mode='categorical')
+
+validation_generator = test_datagen.flow_from_directory(validation_data_dir,
+    shuffle=False,
+    target_size=(sz, sz),
+    batch_size=batch_size, class_mode='categorical')
+
+base_model = ResNet50(weights='imagenet', include_top=False)
 x = base_model.output
-x = Flatten()(x)
-predictions = Dense(num_class, activation='softmax')(x)
+x = GlobalAveragePooling2D()(x)
+x = Dense(1024, activation='relu')(x)
+predictions = Dense(120, activation='sigmoid')(x)
 
-# This is the model we will train
 model = Model(inputs=base_model.input, outputs=predictions)
 
-# First: train only the top layers (which were randomly initialized)
 for layer in base_model.layers:
     layer.trainable = False
 
@@ -62,6 +67,5 @@ model.compile(loss='categorical_crossentropy',
               optimizer='adam',
               metrics=['accuracy'])
 
-callbacks_list = [keras.callbacks.EarlyStopping(monitor='val_acc', patience=3, verbose=1)]
-model.summary()
-model.fit(X_train, Y_train, epochs=1, validation_data=(X_valid, Y_valid), verbose=1)
+model.fit_generator(train_generator, train_generator.n // batch_size, epochs=3, workers=4,
+        validation_data=validation_generator, validation_steps=validation_generator.n // batch_size)
