@@ -11,7 +11,7 @@ from keras.layers import Dense, GlobalAveragePooling2D
 from keras.models import Model
 from keras.preprocessing.image import ImageDataGenerator
 
-PATH = "data/dogbreed/"
+PATH = "../data/dogbreed/"
 train_data_dir = os.path.join(PATH, 'tmp', 'train')
 validation_data_dir = os.path.join(PATH, 'tmp', 'valid')
 

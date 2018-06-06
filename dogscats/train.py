@@ -6,7 +6,7 @@ from keras.layers import Dense, GlobalAveragePooling2D
 from keras.models import Model
 from keras.preprocessing.image import ImageDataGenerator
 
-PATH = "data/dogscats/"
+PATH = "../data/dogscats/"
 sz = 224
 batch_size = 64
 
