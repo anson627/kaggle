@@ -1,22 +1,13 @@
-import os
-import cv2
-
 import numpy as np
-import pandas as pd
-
-from keras import optimizers
-from keras.applications.vgg19 import VGG19
-from keras.layers import Dense, Flatten, BatchNormalization
-from keras.models import Sequential
-
-from tqdm import tqdm
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import fbeta_score
 
-PATH = "/opt/michelangelo/snapshots/"
+from lib.processor import image_processor
+from lib.classifier import image_classifier
+
+path = "/opt/michelangelo/snapshots/"
 img_size = 64
-input_shape = (img_size, img_size, 3)
 batch_size = 128
 learning_rate = 0.001
 epochs = 1
@@ -39,36 +30,14 @@ label_map = {'agriculture': 14,
              'slash_burn': 8,
              'water': 15}
 
-x_train = []
-y_train = []
+processor = image_processor(path, (img_size, img_size))
+xs, ys = processor.preprocess_input('train_v2.csv', 'train-jpg', label_map)
 
-df_train = pd.read_csv(os.path.join(PATH, 'train_v2.csv'))
+x_train, x_valid, y_train, y_valid = train_test_split(xs, ys, test_size=0.2, random_state=1)
 
-for f, tags in tqdm(df_train.values, miniters=1000):
-    path = os.path.join(PATH, 'train-jpg', '{}.jpg'.format(f))
-    img = cv2.imread(path)
-    targets = np.zeros(17)
-    for t in tags.split(' '):
-        targets[label_map[t]] = 1
-    x_train.append(cv2.resize(img, (img_size, img_size)))
-    y_train.append(targets)
+classifier = image_classifier((img_size, img_size, 3))
+model = classifier.get_vgg19_model(len(label_map), learning_rate)
+model.fit(x=x_train, y=y_train, validation_data=(x_valid, y_valid), batch_size=batch_size, epochs=epochs, shuffle=True)
 
-x_train = np.array(x_train, np.float32)/255.
-y_train = np.array(y_train, np.uint8)
-
-X_train, X_valid, Y_train, Y_valid = train_test_split(x_train, y_train, test_size=0.2, random_state=1)
-
-model = Sequential()
-model.add(BatchNormalization(input_shape=input_shape))
-model.add(VGG19(weights='imagenet', include_top=False, input_shape=input_shape))
-model.add(Flatten())
-model.add(Dense(17, activation='sigmoid'))
-
-model.compile(loss='binary_crossentropy',
-              optimizer=optimizers.Adam(lr=learning_rate),
-              metrics=['accuracy'])
-
-model.fit(x=X_train, y=Y_train, validation_data=(X_valid, Y_valid), batch_size=batch_size, epochs=epochs, shuffle=True)
-
-p_valid = model.predict(X_valid, batch_size=batch_size)
-print('F-beta score is {}'.format(fbeta_score(Y_valid, np.array(p_valid) > 0.2, beta=2, average='samples')))
+p_valid = model.predict(x_valid, batch_size=batch_size)
+print('F-beta score is {}'.format(fbeta_score(y_valid, np.array(p_valid) > 0.2, beta=2, average='samples')))

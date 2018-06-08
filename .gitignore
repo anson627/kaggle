@@ -7,5 +7,6 @@ env
 # Pycharm workspace
 .idea
 
-# Data
 data
+*.pyc
+.bsync-snap-*
