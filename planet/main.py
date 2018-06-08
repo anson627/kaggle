@@ -32,39 +32,23 @@ labels = ['blow_down',
           'water',
           'cloudy']
 
-thresholds = {'blow_down': 0.2,
-              'bare_ground': 0.138,
-              'conventional_mine': 0.1,
-              'blooming': 0.168,
-              'cultivation': 0.204,
-              'artisinal_mine': 0.114,
-              'haze': 0.204,
-              'primary': 0.204,
-              'slash_burn': 0.38,
-              'habitation': 0.17,
-              'clear': 0.13,
-              'road': 0.156,
-              'selective_logging': 0.154,
-              'partly_cloudy': 0.112,
-              'agriculture': 0.164,
-              'water': 0.182,
-              'cloudy': 0.076}
+thresholds = {k: 0.2 for v, k in enumerate(labels)}
 
 processor = DataProcessor(root_path, (img_size, img_size))
-classifier = ImageClassifier((img_size, img_size, 3))
+classifier = ImageClassifier((img_size, img_size, 3), len(labels))
 
 
 def train():
     csv = pd.read_csv(os.path.join(root_path, 'train_v2.csv'))
     xs, ys = processor.process_train_input(csv, 'train-jpg', labels)
     x_train, x_valid, y_train, y_valid = train_test_split(xs, ys, test_size=0.2, random_state=1)
-    model = classifier.get_vgg19_model(len(labels), learning_rate)
+    model = classifier.get_vgg19_model(learning_rate)
     model.fit(x=x_train, y=y_train, validation_data=(x_valid, y_valid), batch_size=batch_size, epochs=epochs, shuffle=True)
     model.save_weights(weight_path)
 
 
 def predict():
-    model = classifier.get_vgg19_model(len(labels), learning_rate)
+    model = classifier.get_vgg19_model(learning_rate)
     if os.path.isfile(weight_path):
         model.load_weights(weight_path)
     csv = pd.read_csv(os.path.join(root_path, 'sample_submission_v2.csv'))
