@@ -4,7 +4,7 @@ from keras.layers import Dense, Flatten, BatchNormalization
 from keras.models import Sequential
 
 
-class image_classifier:
+class ImageClassifier:
     input_shape = ()
 
     def __init__(self, input_shape):
