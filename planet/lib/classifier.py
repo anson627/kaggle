@@ -44,4 +44,4 @@ class ImageClassifier:
         self.model.load_weights(path)
 
     def predict(self, x, batch_size):
-        self.model.predict(x=x, batch_size=batch_size)
+        return self.model.predict(x=x, batch_size=batch_size)

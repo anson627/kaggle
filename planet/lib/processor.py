@@ -36,7 +36,7 @@ class DataProcessor:
         for name, _ in tqdm(csv.values):
             img = cv2.imread(os.path.join(self.root_path, folder_name, '{}.jpg'.format(name)))
             xs.append(cv2.resize(img, self.input_shape))
-        xs = np.array(xs, np.uint8)
+        xs = np.array(xs, np.float32) / 255.
         return xs
 
     def process_output(self, csv, prediction, output_name, thresholds):

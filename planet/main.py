@@ -12,8 +12,8 @@ root_path = "/opt/michelangelo/snapshots/"
 img_size = 64
 batch_size = 128
 learning_rate = 0.00001
-epochs = 5
-splits = 5
+epochs = 15
+splits = 10
 
 labels = ['blow_down',
           'bare_ground',
@@ -62,7 +62,7 @@ def predict():
         ys.append(y_test)
 
     preds = np.array(ys[0])
-    for i in range(splits):
+    for i in range(1, splits):
         preds += np.array(ys[i])
     preds /= splits
 
@@ -72,7 +72,7 @@ def predict():
 
 def main():
     train()
-    # predict()
+    predict()
 
 
 if __name__ == '__main__':
