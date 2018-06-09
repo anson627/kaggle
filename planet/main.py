@@ -11,9 +11,9 @@ from lib.classifier import ImageClassifier
 root_path = "/opt/michelangelo/snapshots/"
 img_size = 64
 batch_size = 128
-learning_rate = 0.00001
-epochs = 15
-splits = 10
+learning_rates = [0.001, 0.0001, 0.00001]
+learning_epochs = [20, 5, 5]
+num_splits = 5
 
 labels = ['blow_down',
           'bare_ground',
@@ -36,43 +36,44 @@ labels = ['blow_down',
 thresholds = {k: 0.2 for v, k in enumerate(labels)}
 
 processor = DataProcessor(root_path, (img_size, img_size))
-classifier = ImageClassifier(root_path, (img_size, img_size, 3), len(labels), learning_rate)
+classifier = ImageClassifier(root_path, (img_size, img_size, 3), len(labels))
 
 
 def train():
     csv = pd.read_csv(os.path.join(root_path, 'train_v2.csv'))
     xs, ys = processor.process_train_input(csv, 'train-jpg', labels)
-    kf = KFold(n_splits=splits, shuffle=True, random_state=1)
-    split = 0
-    for train_index, test_index in kf.split(xs):
+    kfold = KFold(n_splits=num_splits, shuffle=True, random_state=1)
+    idx_split = 0
+    for train_index, test_index in kfold.split(xs):
         x_train, x_valid = xs[train_index], xs[test_index]
         y_train, y_valid = ys[train_index], ys[test_index]
-        classifier.fit(x=x_train, y=y_train, validation_data=(x_valid, y_valid), batch_size=batch_size, epochs=epochs)
-        classifier.save(os.path.join(root_path, 'model-{}.h5'.format(split)))
-        split += 1
+        for lr, epochs in zip(learning_rates, learning_epochs):
+            classifier.fit(x=x_train, y=y_train, validation_data=(x_valid, y_valid), batch_size=batch_size, lr=lr,
+                           epochs=epochs, idx_split=idx_split)
+        idx_split += 1
 
 
 def predict():
     csv = pd.read_csv(os.path.join(root_path, 'sample_submission_v2.csv'))
     ys = []
-    for split in range(splits):
-        classifier.load(os.path.join(root_path, 'model-{}.h5'.format(split)))
+    for idx_split in range(num_splits):
+        classifier.load(idx_split)
         x_test = processor.process_test_input(csv, 'test-jpg')
         y_test = classifier.predict(x_test, batch_size=batch_size)
         ys.append(y_test)
 
-    preds = np.array(ys[0])
-    for i in range(1, splits):
-        preds += np.array(ys[i])
-    preds /= splits
+    prediction = np.array(ys[0])
+    for idx_split in range(1, num_splits):
+        prediction += np.array(ys[idx_split])
+    prediction /= num_splits
 
-    preds = pd.DataFrame(preds, columns=labels)
-    processor.process_output(csv, preds, 'submission.csv', thresholds)
+    prediction = pd.DataFrame(prediction, columns=labels)
+    processor.process_output(csv, prediction, 'submission.csv', thresholds)
 
 
 def main():
     train()
-    predict()
+    # predict()
 
 
 if __name__ == '__main__':
