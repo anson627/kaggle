@@ -12,9 +12,9 @@ from lib.classifier import ImageClassifier
 root_path = "/opt/michelangelo/snapshots/"
 img_size = 64
 batch_size = 128
-learning_rates = [0.0001]
-learning_epochs = [15]
-num_splits = 1
+learning_rates = [0.00001]
+learning_epochs = [10]
+num_splits = 5
 
 labels = ['blow_down',
           'bare_ground',
@@ -44,9 +44,9 @@ def train():
     csv = pd.read_csv(os.path.join(root_path, 'train_v2.csv'))
     xs, ys = processor.process_train_input(csv, 'train-jpg', labels)
     for lr, epochs in zip(learning_rates, learning_epochs):
-        x_train, x_valid, y_train, y_valid= train_test_split(xs, ys, test_size = 0.2, random_state=1)
-        classifier.fit(x=x_train, y=y_train, validation_data=(x_valid, y_valid), batch_size=batch_size, lr=lr,
-                       epochs=epochs)
+        x_train, x_valid, y_train, y_valid = train_test_split(xs, ys, test_size=0.2, random_state=1)
+        classifier.train(x=x_train, y=y_train, validation_data=(x_valid, y_valid), batch_size=batch_size, lr=lr,
+                         epochs=epochs)
 
 
 def predict():
@@ -66,8 +66,8 @@ def k_fold_train():
         x_train, x_valid = xs[train_index], xs[test_index]
         y_train, y_valid = ys[train_index], ys[test_index]
         for lr, epochs in zip(learning_rates, learning_epochs):
-            classifier.fit(x=x_train, y=y_train, validation_data=(x_valid, y_valid), batch_size=batch_size, lr=lr,
-                           epochs=epochs, idx_split=idx_split)
+            classifier.train(x=x_train, y=y_train, validation_data=(x_valid, y_valid), batch_size=batch_size, lr=lr,
+                             epochs=epochs, idx_split=idx_split)
         idx_split += 1
 
 

@@ -1,10 +1,11 @@
 import os
 
+from keras import backend
 from keras import optimizers
 from keras.applications.vgg19 import VGG19
 from keras.layers import Dense, Flatten, BatchNormalization
 from keras.models import Sequential
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
 # from keras.utils import plot_model
 
 from tensor_board import MyTensorBoard
@@ -27,21 +28,37 @@ class ImageClassifier:
         self.model.add(Dense(self.output_size, activation='sigmoid'))
         # plot_model(self.model, to_file=os.path.join(root_path, 'model.png'))
 
-    def fit(self, x, y, batch_size, validation_data, lr, epochs, idx_split=0):
+    def train(self, x, y, batch_size, validation_data, lr, epochs, idx_split=0):
+        def f2(y_true, y_pred):
+            def recall(y_true, y_pred):
+                true_positives = backend.sum(backend.round(backend.clip(y_true * y_pred, 0, 1)))
+                possible_positives = backend.sum(backend.round(backend.clip(y_true, 0, 1)))
+                recall = true_positives / (possible_positives + backend.epsilon())
+                return recall
+
+            def precision(y_true, y_pred):
+                true_positives = backend.sum(backend.round(backend.clip(y_true * y_pred, 0, 1)))
+                predicted_positives = backend.sum(backend.round(backend.clip(y_pred, 0, 1)))
+                precision = true_positives / (predicted_positives + backend.epsilon())
+                return precision
+
+            precision = precision(y_true, y_pred)
+            recall = recall(y_true, y_pred)
+            return 5 * ((precision * recall) / (4 * precision + recall + backend.epsilon()))
+
         self.model.compile(loss='binary_crossentropy',
                            optimizer=optimizers.Adam(lr=lr),
-                           metrics=['accuracy'])
+                           metrics=['accuracy', f2])
 
-        early_stop = EarlyStopping(monitor='val_loss', patience=2)
-        model_checkpoint = ModelCheckpoint(self.__get_weights_path(idx_split), monitor='val_loss', save_best_only=True)
-        tensor_board = MyTensorBoard(log_dir=self.__get_tensor_board_path(), histogram_freq=0, write_graph=True,
-                                     write_images=True)
+        # early_stop = EarlyStopping(patience=2)
+        model_checkpoint = ModelCheckpoint(self.__get_weights_path(idx_split), save_best_only=True)
+        tensor_board = MyTensorBoard(log_dir=self.__get_tensor_board_path(idx_split), write_images=True)
         self.model.fit(x=x,
                        y=y,
                        validation_data=validation_data,
                        batch_size=batch_size,
                        epochs=epochs,
-                       callbacks=[early_stop, model_checkpoint, tensor_board])
+                       callbacks=[model_checkpoint, tensor_board])
 
     def predict(self, x, batch_size):
         return self.model.predict(x=x, batch_size=batch_size)
@@ -52,8 +69,8 @@ class ImageClassifier:
     def load(self, idx_split):
         self.model.load_weights(self.__get_weights_path(idx_split))
 
-    def __get_tensor_board_path(self):
-        return os.path.join(self.root_path, 'logs')
+    def __get_tensor_board_path(self, index):
+        return os.path.join(self.root_path, 'logs-{}'.format(index))
 
     def __get_weights_path(self, index):
         return os.path.join(self.root_path, 'model-{}.h5'.format(index))
