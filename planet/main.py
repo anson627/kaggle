@@ -12,8 +12,8 @@ from lib.classifier import ImageClassifier
 root_path = "/opt/michelangelo/snapshots/"
 img_size = 64
 batch_size = 128
-learning_rates = [0.00001]
-learning_epochs = [10]
+learning_rates = [0.001, 0.0001, 0.00001]
+learning_epochs = [20, 5, 5]
 num_splits = 5
 
 labels = ['blow_down',
@@ -63,9 +63,11 @@ def k_fold_train():
     k_fold = KFold(n_splits=num_splits, shuffle=True, random_state=1)
     idx_split = 0
     for train_index, test_index in k_fold.split(xs):
+        print("split {}".format(idx_split))
         x_train, x_valid = xs[train_index], xs[test_index]
         y_train, y_valid = ys[train_index], ys[test_index]
         for lr, epochs in zip(learning_rates, learning_epochs):
+            print("learning rate {}, epochs {}".format(lr, epochs))
             classifier.train(x=x_train, y=y_train, validation_data=(x_valid, y_valid), batch_size=batch_size, lr=lr,
                              epochs=epochs, idx_split=idx_split)
         idx_split += 1
@@ -90,7 +92,7 @@ def k_fold_predict():
 
 
 def main():
-    train()
+    k_fold_train()
     # predict()
 
 

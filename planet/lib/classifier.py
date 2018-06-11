@@ -5,7 +5,7 @@ from keras import optimizers
 from keras.applications.vgg19 import VGG19
 from keras.layers import Dense, Flatten, BatchNormalization
 from keras.models import Sequential
-from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 # from keras.utils import plot_model
 
 from tensor_board import MyTensorBoard
@@ -50,15 +50,15 @@ class ImageClassifier:
                            optimizer=optimizers.Adam(lr=lr),
                            metrics=['accuracy', f2])
 
-        # early_stop = EarlyStopping(patience=2)
+        early_stop = EarlyStopping(patience=2)
         model_checkpoint = ModelCheckpoint(self.__get_weights_path(idx_split), save_best_only=True)
-        tensor_board = MyTensorBoard(log_dir=self.__get_tensor_board_path(idx_split), write_images=True)
+        tensor_board = MyTensorBoard(log_dir=self.__get_logs_path(idx_split, lr, epochs), write_images=True)
         self.model.fit(x=x,
                        y=y,
                        validation_data=validation_data,
                        batch_size=batch_size,
                        epochs=epochs,
-                       callbacks=[model_checkpoint, tensor_board])
+                       callbacks=[early_stop, model_checkpoint, tensor_board])
 
     def predict(self, x, batch_size):
         return self.model.predict(x=x, batch_size=batch_size)
@@ -69,8 +69,8 @@ class ImageClassifier:
     def load(self, idx_split):
         self.model.load_weights(self.__get_weights_path(idx_split))
 
-    def __get_tensor_board_path(self, index):
-        return os.path.join(self.root_path, 'logs-{}'.format(index))
+    def __get_weights_path(self, idx_split):
+        return os.path.join(self.root_path, 'models', 'split{}.h5'.format(idx_split))
 
-    def __get_weights_path(self, index):
-        return os.path.join(self.root_path, 'model-{}.h5'.format(index))
+    def __get_logs_path(self, idx_split, lr, epochs):
+        return os.path.join(self.root_path, 'logs', 'split{}-lr{}-epochs{}'.format(idx_split, lr, epochs))
