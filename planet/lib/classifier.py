@@ -3,7 +3,7 @@ import os
 from keras import backend
 from keras import optimizers
 from keras.applications.vgg19 import VGG19
-from keras.layers import Dense, Flatten, BatchNormalization
+from keras.layers import Dense, Flatten, BatchNormalization, Conv2D, MaxPooling2D, Dropout
 from keras.models import Sequential
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 # from keras.utils import plot_model
@@ -21,12 +21,40 @@ class ImageClassifier:
         self.root_path = root_path
         self.input_shape = input_shape
         self.output_size = output_size
-        self.model = Sequential()
-        self.model.add(BatchNormalization(input_shape=self.input_shape))
-        self.model.add(VGG19(weights='imagenet', include_top=False, input_shape=self.input_shape))
-        self.model.add(Flatten())
-        self.model.add(Dense(self.output_size, activation='sigmoid'))
+        # self.model = Sequential()
+        # self.model.add(BatchNormalization(input_shape=self.input_shape))
+        # self.model.add(VGG19(weights='imagenet', include_top=False, input_shape=self.input_shape))
+        # self.model.add(Flatten())
+        # self.model.add(Dense(self.output_size, activation='sigmoid'))
         # plot_model(self.model, to_file=os.path.join(root_path, 'model.png'))
+        model = Sequential()
+        model.add(BatchNormalization(input_shape=(64, 64, 3)))
+        model.add(Conv2D(32, kernel_size=(3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(32, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+
+        model.add(Conv2D(64, kernel_size=(3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(64, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+
+        model.add(Conv2D(128, kernel_size=(3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(128, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+
+        model.add(Conv2D(256, kernel_size=(3, 3), padding='same', activation='relu'))
+        model.add(Conv2D(256, (3, 3), activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Dropout(0.25))
+
+        model.add(Flatten())
+        model.add(Dense(512, activation='relu'))
+        model.add(BatchNormalization())
+        model.add(Dropout(0.5))
+        model.add(Dense(17, activation='sigmoid'))
+        self.model = model
 
     def train(self, x, y, batch_size, validation_data, lr, epochs, idx_split=0):
         def f2(y_true, y_pred):

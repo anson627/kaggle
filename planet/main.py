@@ -34,7 +34,23 @@ labels = ['blow_down',
           'water',
           'cloudy']
 
-thresholds = {k: 0.2 for v, k in enumerate(labels)}
+thresholds = {'blow_down':0.2,
+                'bare_ground':0.138,
+                'conventional_mine':0.1,
+                'blooming':0.168,
+                'cultivation':0.204,
+                'artisinal_mine':0.114,
+                'haze':0.204,
+                'primary':0.204,
+                'slash_burn':0.38,
+                'habitation':0.17,
+                'clear':0.13,
+                'road':0.156,
+                'selective_logging':0.154,
+                'partly_cloudy':0.112,
+                'agriculture':0.164,
+                'water':0.182,
+                'cloudy':0.076}
 
 processor = DataProcessor(root_path, (img_size, img_size))
 classifier = ImageClassifier(root_path, (img_size, img_size, 3), len(labels))
