@@ -3,7 +3,7 @@ from keras.utils import multi_gpu_model
 
 
 # https://github.com/keras-team/keras/issues/2436#issuecomment-354882296
-class ModelParallel(Model):
+class ParallelModel(Model):
     def __init__(self, ser_model, gpus):
         pmodel = multi_gpu_model(ser_model, gpus)
         self.__dict__.update(pmodel.__dict__)
@@ -17,4 +17,4 @@ class ModelParallel(Model):
         if 'load' in attrname or 'save' in attrname:
             return getattr(self._smodel, attrname)
 
-        return super(ModelParallel, self).__getattribute__(attrname)
+        return super(ParallelModel, self).__getattribute__(attrname)

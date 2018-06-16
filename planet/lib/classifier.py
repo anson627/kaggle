@@ -9,7 +9,7 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint
 # from keras.utils import plot_model
 
 from tensor_board import MyTensorBoard
-from model_parallel import ModelParallel
+from parallel_model import ParallelModel
 
 
 class ImageClassifier:
@@ -27,7 +27,7 @@ class ImageClassifier:
         self.model.add(VGG19(weights='imagenet', include_top=False, input_shape=self.input_shape))
         self.model.add(Flatten())
         self.model.add(Dense(self.output_size, activation='sigmoid'))
-        self.model = ModelParallel(self.model, gpus=4)
+        self.model = ParallelModel(self.model, gpus=4)
         # plot_model(self.model, to_file=os.path.join(root_path, 'model.png'))
 
     def train(self, x, y, batch_size, validation_data, lr, epochs, idx_split=0):
