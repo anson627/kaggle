@@ -29,7 +29,23 @@ class DataProcessor:
             xs.append(img)
             ys.append(y)
 
-        xs = np.array(xs, np.float32) / 255.
+            flipped = cv2.flip(img, 1)
+            rows, cols, channel = img.shape
+
+            xs.append(flipped)
+            ys.append(y)
+
+            for rotate_degree in [90, 180, 270]:
+                mat = cv2.getRotationMatrix2D((cols / 2, rows / 2), rotate_degree, 1)
+                dst = cv2.warpAffine(img, mat, (cols, rows))
+                xs.append(dst)
+                ys.append(y)
+
+                dst = cv2.warpAffine(flipped, mat, (cols, rows))
+                xs.append(dst)
+                ys.append(y)
+
+        xs = np.array(xs, np.uint8)
         ys = np.array(ys, np.uint8)
         return xs, ys
 
@@ -51,7 +67,7 @@ class DataProcessor:
         for name, _ in tqdm(csv.values):
             img = cv2.imread(os.path.join(self.root_path, folder_name, '{}.jpg'.format(name)))
             xs.append(cv2.resize(img, self.input_shape))
-        xs = np.array(xs, np.float32) / 255.
+        xs = np.array(xs, np.uint8)
         return xs
 
     def process_output(self, csv, prediction, output_name, thresholds):
@@ -67,7 +83,7 @@ class DataProcessor:
         csv['tags'] = res
         csv.to_csv(os.path.join(self.root_path, output_name), index=False)
 
-    def get_generator(self, zip_list, folder_name, batch_size, shuffle=False, has_label=True):
+    def get_generator(self, zip_list, folder_name, batch_size, shuffle=False, has_label=True, augment=True):
         if shuffle:
             random.shuffle(zip_list)
         batch_idx = 0
@@ -94,3 +110,4 @@ class DataProcessor:
 
             if has_label and batch_idx == len(zip_list) / batch_size:
                 batch_idx = 0
+

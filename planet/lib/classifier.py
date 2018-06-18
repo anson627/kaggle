@@ -37,7 +37,7 @@ class ImageClassifier:
         # x = self.base_model.output
         # x = Dense(2048, activation='relu')(x)
         # x = Dropout(0.25)(x)
-        # output = Dense(17, activation='sigmoid')(x)
+        # output = Dense(self.output_size, activation='sigmoid')(x)
         # self.model = Model(inputs=self.base_model.inputs, outputs=output)
 
         self.model = ParallelModel(self.model, gpus=4)
@@ -82,15 +82,15 @@ class ImageClassifier:
                            optimizer=optimizers.Adam(lr=lr),
                            metrics=['accuracy', self.f2])
 
-        early_stop = EarlyStopping(patience=2)
+        early_stop = EarlyStopping(patience=5)
         model_checkpoint = ModelCheckpoint(self.__get_weights_path(idx_split), save_best_only=True)
         tensor_board = MyTensorBoard(log_dir=self.__get_logs_path(idx_split, lr, epochs), write_images=True)
         self.model.fit_generator(generator=train_gen,
-                                 steps_per_epoch=(train_size // batch_size),
+                                 steps_per_epoch=(train_size // batch_size + 1),
                                  epochs=epochs,
                                  shuffle=False,
                                  validation_data=valid_gen,
-                                 validation_steps=(valid_size // batch_size),
+                                 validation_steps=(valid_size // batch_size + 1),
                                  callbacks=[early_stop, model_checkpoint, tensor_board])
 
     def predict(self, x, batch_size):
