@@ -1,5 +1,6 @@
 import os
 import cv2
+import random
 
 import numpy as np
 
@@ -15,21 +16,35 @@ class DataProcessor:
         self.root_path = root_path
         self.input_shape = input_shape
 
-    def process_train_input(self, csv, folder_name, labels):
+    def process_image_input(self, csv, folder_name, labels):
         xs = []
         ys = []
         label_dict = {k: v for v, k in enumerate(labels)}
         for name, tags in tqdm(csv.values):
             img = cv2.imread(os.path.join(self.root_path, folder_name, '{}.jpg'.format(name)))
+            img = cv2.resize(img, self.input_shape)
             y = np.zeros(len(labels))
             for t in tags.split(' '):
                 y[label_dict[t]] = 1
-                xs.append(cv2.resize(img, self.input_shape))
-                ys.append(y)
+            xs.append(img)
+            ys.append(y)
 
         xs = np.array(xs, np.float32) / 255.
         ys = np.array(ys, np.uint8)
         return xs, ys
+
+    @staticmethod
+    def process_file_input(csv, labels):
+        xs = []
+        ys = []
+        label_dict = {k: v for v, k in enumerate(labels)}
+        for name, tags in tqdm(csv.values):
+            y = np.zeros(len(labels))
+            for t in tags.split(' '):
+                y[label_dict[t]] = 1
+            xs.append(name)
+            ys.append(y)
+        return np.array(xs), np.array(ys)
 
     def process_test_input(self, csv, folder_name):
         xs = []
@@ -51,3 +66,31 @@ class DataProcessor:
 
         csv['tags'] = res
         csv.to_csv(os.path.join(self.root_path, output_name), index=False)
+
+    def get_generator(self, zip_list, folder_name, batch_size, shuffle=False, has_label=True):
+        if shuffle:
+            random.shuffle(zip_list)
+        batch_idx = 0
+        while True:
+            begin = batch_size * batch_idx
+            end = batch_size * (batch_idx + 1)
+            batch_input = zip_list[begin:end]
+            image_list = []
+            label_list = []
+            batch_idx += 1
+            if has_label:
+                for name, label in batch_input:
+                    path = os.path.join(self.root_path, folder_name, '{}.jpg'.format(name))
+                    image = cv2.resize(cv2.imread(path), self.input_shape)
+                    image_list.append(image)
+                    label_list.append(label)
+                yield (np.array(image_list), np.array(label_list))
+            else:
+                for name in batch_input:
+                    path = os.path.join(self.root_path, folder_name, '{}.jpg'.format(name))
+                    image = cv2.resize(cv2.imread(path), self.input_shape)
+                    image_list.append(image)
+                yield (np.array(image_list))
+
+            if has_label and batch_idx == len(zip_list) / batch_size:
+                batch_idx = 0
