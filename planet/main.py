@@ -100,35 +100,48 @@ def k_fold_predict():
 
 def train_generator():
     processor = DataProcessor(root_path, (img_size, img_size))
-    classifier = ImageClassifier(root_path, (img_size, img_size, 3), len(labels))
     csv = pd.read_csv(os.path.join(root_path, 'train_v2.csv'))
     xs, ys = processor.process_file_input(csv, labels)
-    for idx_split in range(num_splits):
-        x_train, x_valid, y_train, y_valid = train_test_split(xs, ys, test_size=0.2, random_state=1)
-        print("train size {}, valid size {}".format(len(x_train), len(x_valid)))
-        for lr, epochs in zip(learning_rates, learning_epochs):
-            gen_train = processor.get_generator(list(zip(x_train, y_train)), 'train-jpg', batch_size)
-            gen_valid = processor.get_generator(list(zip(x_valid, y_valid)), 'train-jpg', batch_size)
-            print("learning rate {}, epochs {}".format(lr, epochs))
-            classifier.train_generator(gen_train, len(x_train), gen_valid, len(x_valid), batch_size, lr=lr,
-                                       epochs=epochs)
+    k_fold = KFold(n_splits=num_splits)
+    lr = 1e-4
+    epochs = 50
+    idx_split = 0
+    for train_index, valid_index in k_fold.split(xs):
+        x_train, x_valid = xs[train_index], xs[valid_index]
+        y_train, y_valid = ys[train_index], ys[valid_index]
+        print("split {} train size {} valid size {}".format(idx_split, len(x_train), len(x_valid)))
+        gen_train = processor.get_generator(list(zip(x_train, y_train)), 'train-jpg', batch_size)
+        gen_valid = processor.get_generator(list(zip(x_valid, y_valid)), 'train-jpg', batch_size)
+        print("learning rate {}, epochs {}".format(lr, epochs))
+        classifier = ImageClassifier(root_path, (img_size, img_size, 3), len(labels))
+        classifier.train_generator(gen_train, len(x_train), gen_valid, len(x_valid), batch_size, lr=lr, epochs=epochs,
+                                   idx_split=idx_split)
+        idx_split += 1
 
 
 def predict_generator():
     processor = DataProcessor(root_path, (img_size, img_size))
     classifier = ImageClassifier(root_path, (img_size, img_size, 3), len(labels))
-    classifier.load()
     csv = pd.read_csv(os.path.join(root_path, 'sample_submission_v2.csv'))
     x_test, _ = processor.process_file_input(csv, labels)
-    ys = []
+    ps = []
     for idx_split in range(num_splits):
-        gen_test = processor.get_generator(x_test, 'test-jpg', batch_size, shuffle=False, has_label=False)
-        y_test = classifier.predict_generator(gen_test, len(x_test), batch_size=batch_size)
-        ys.append(y_test)
+        classifier.load(idx_split)
+        ys = []
+        for opt in range(6):
+            print('split {} TTA {}'.format(idx_split, opt))
+            gen_test = processor.get_generator(x_test, 'test-jpg', batch_size, has_label=False, option=opt)
+            y = classifier.predict_generator(gen_test, len(x_test), batch_size)
+            ys.append(y)
+        y = np.array(ys[0])
+        for i in range(1, 6):
+            y += np.array(ys[i])
+        y /= 6
+        ps.append(y)
 
-    prediction = np.array(ys[0])
+    prediction = np.array(ps[0])
     for idx_split in range(1, num_splits):
-        prediction += np.array(ys[idx_split])
+        prediction += np.array(ps[idx_split])
     prediction /= num_splits
 
     prediction = pd.DataFrame(prediction, columns=labels)
@@ -136,8 +149,8 @@ def predict_generator():
 
 
 def main():
-    k_fold_train()
-    k_fold_predict()
+    train_generator()
+    predict_generator()
     # train()
     # predict()
 

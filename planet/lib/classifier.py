@@ -8,7 +8,7 @@ from keras.applications.vgg19 import VGG19
 from keras.applications.resnet50 import ResNet50
 from keras.layers import Dense, Flatten, BatchNormalization, Dropout
 from keras.models import Sequential, Model
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 # from keras.utils import plot_model
 
 from tensor_board import MyTensorBoard
@@ -40,7 +40,7 @@ class ImageClassifier:
         # output = Dense(self.output_size, activation='sigmoid')(x)
         # self.model = Model(inputs=self.base_model.inputs, outputs=output)
 
-        self.model = ParallelModel(self.model, gpus=4)
+        # self.model = ParallelModel(self.model, gpus=4)
         # plot_model(self.model, to_file=os.path.join(root_path, 'model.png'))
 
     @staticmethod
@@ -82,8 +82,9 @@ class ImageClassifier:
                            optimizer=optimizers.Adam(lr=lr),
                            metrics=['accuracy', self.f2])
 
-        early_stop = EarlyStopping(patience=5)
+        early_stop = EarlyStopping(patience=4, min_delta=1e-4)
         model_checkpoint = ModelCheckpoint(self.__get_weights_path(idx_split), save_best_only=True)
+        reduce_lr = ReduceLROnPlateau(patience=2, cooldown=2)
         tensor_board = MyTensorBoard(log_dir=self.__get_logs_path(idx_split, lr, epochs), write_images=True)
         self.model.fit_generator(generator=train_gen,
                                  steps_per_epoch=(train_size // batch_size + 1),
@@ -91,7 +92,7 @@ class ImageClassifier:
                                  shuffle=False,
                                  validation_data=valid_gen,
                                  validation_steps=(valid_size // batch_size + 1),
-                                 callbacks=[early_stop, model_checkpoint, tensor_board])
+                                 callbacks=[early_stop, model_checkpoint, reduce_lr, tensor_board])
 
     def predict(self, x, batch_size):
         return self.model.predict(x=x, batch_size=batch_size)

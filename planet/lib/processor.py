@@ -83,9 +83,7 @@ class DataProcessor:
         csv['tags'] = res
         csv.to_csv(os.path.join(self.root_path, output_name), index=False)
 
-    def get_generator(self, zip_list, folder_name, batch_size, shuffle=False, has_label=True, augment=True):
-        if shuffle:
-            random.shuffle(zip_list)
+    def get_generator(self, zip_list, folder_name, batch_size, has_label=True, option=-1):
         batch_idx = 0
         while True:
             begin = batch_size * batch_idx
@@ -98,6 +96,7 @@ class DataProcessor:
                 for name, label in batch_input:
                     path = os.path.join(self.root_path, folder_name, '{}.jpg'.format(name))
                     image = cv2.resize(cv2.imread(path), self.input_shape)
+                    image = self.random_augment(image, option)
                     image_list.append(image)
                     label_list.append(label)
                 yield (np.array(image_list), np.array(label_list))
@@ -105,9 +104,36 @@ class DataProcessor:
                 for name in batch_input:
                     path = os.path.join(self.root_path, folder_name, '{}.jpg'.format(name))
                     image = cv2.resize(cv2.imread(path), self.input_shape)
+                    image = self.random_augment(image, option)
                     image_list.append(image)
                 yield (np.array(image_list))
 
             if has_label and batch_idx == len(zip_list) / batch_size:
                 batch_idx = 0
 
+    @staticmethod
+    def random_augment(img, opt):
+        if opt == -1:
+            opt = np.random.randint(6)
+        rows, cols, channel = img.shape
+        degree = 90
+        flip = False
+        if opt == 1:
+            degree = 90
+            flip = True
+        if opt == 2:
+            degree = 180
+        if opt == 3:
+            degree = 180
+            flip = True
+        if opt == 4:
+            degree = 270
+        if opt == 5:
+            degree = 270
+            flip = True
+
+        mat = cv2.getRotationMatrix2D((cols / 2, rows / 2), degree, 1)
+        img = cv2.warpAffine(img, mat, (cols, rows))
+        if flip:
+            img = cv2.flip(img, 1)
+        return img
