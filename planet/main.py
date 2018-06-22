@@ -104,6 +104,7 @@ def train_generator():
     xs, ys = processor.process_file_input(csv, labels)
     k_fold = KFold(n_splits=num_splits)
     lr = 1e-4
+    decay = 1e-8
     epochs = 50
     idx_split = 0
     for train_index, valid_index in k_fold.split(xs):
@@ -115,7 +116,7 @@ def train_generator():
         classifier = ImageClassifier(root_path, (img_size, img_size, 3), len(labels))
         for restart in range(3):
             print("restart {} learning rate {}, epochs {}".format(restart, lr, epochs))
-            classifier.train_generator(gen_train, len(x_train), gen_valid, len(x_valid), batch_size, lr=lr,
+            classifier.train_generator(gen_train, len(x_train), gen_valid, len(x_valid), batch_size, lr=lr, decay=decay,
                                        epochs=epochs, idx_split=idx_split)
         idx_split += 1
 
