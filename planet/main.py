@@ -112,10 +112,11 @@ def train_generator():
         print("split {} train size {} valid size {}".format(idx_split, len(x_train), len(x_valid)))
         gen_train = processor.get_generator(list(zip(x_train, y_train)), 'train-jpg', batch_size)
         gen_valid = processor.get_generator(list(zip(x_valid, y_valid)), 'train-jpg', batch_size)
-        print("learning rate {}, epochs {}".format(lr, epochs))
         classifier = ImageClassifier(root_path, (img_size, img_size, 3), len(labels))
-        classifier.train_generator(gen_train, len(x_train), gen_valid, len(x_valid), batch_size, lr=lr, epochs=epochs,
-                                   idx_split=idx_split)
+        for restart in range(3):
+            print("restart {} learning rate {}, epochs {}".format(restart, lr, epochs))
+            classifier.train_generator(gen_train, len(x_train), gen_valid, len(x_valid), batch_size, lr=lr,
+                                       epochs=epochs, idx_split=idx_split)
         idx_split += 1
 
 
