@@ -12,7 +12,7 @@ from lib.classifier import ImageClassifier
 # import matplotlib.pyplot as plt
 
 root_path = "/opt/michelangelo/snapshots/"
-img_size = 128
+img_size = 224
 batch_size = 128
 learning_rates = [0.001, 0.0001, 0.00001]
 learning_epochs = [20, 5, 5]
@@ -45,9 +45,11 @@ def train():
     csv = pd.read_csv(os.path.join(root_path, 'train_v2.csv'))
     xs, ys = processor.process_image_input(csv, 'train-jpg', labels)
     x_train, x_valid, y_train, y_valid = train_test_split(xs, ys, test_size=0.2, random_state=1)
-    for lr, epochs in zip(learning_rates, learning_epochs):
-        classifier.train(x=x_train, y=y_train, validation_data=(x_valid, y_valid), batch_size=batch_size, lr=lr,
-                         epochs=epochs)
+    lr = 1e-4
+    epochs = 50
+    classifier.set_trainable(False)
+    classifier.train(x=x_train, y=y_train, validation_data=(x_valid, y_valid), batch_size=batch_size, lr=lr,
+                     epochs=epochs)
 
 
 def predict():
@@ -55,6 +57,7 @@ def predict():
     classifier = ImageClassifier(root_path, (img_size, img_size, 3), len(labels))
     csv = pd.read_csv(os.path.join(root_path, 'sample_submission_v2.csv'))
     x_test = processor.process_test_input(csv, 'test-jpg')
+    classifier.load(0)
     y_test = classifier.predict(x_test, batch_size=batch_size)
     y_test = pd.DataFrame(y_test, columns=labels)
     processor.process_output(csv, y_test, 'submission.csv', thresholds)
@@ -151,10 +154,10 @@ def predict_generator():
 
 
 def main():
-    train_generator()
-    predict_generator()
+    # train_generator()
+    # predict_generator()
     # train()
-    # predict()
+    predict()
 
 
 if __name__ == '__main__':

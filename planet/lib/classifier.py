@@ -28,7 +28,6 @@ class ImageClassifier:
 
         self.base_model = VGG19(weights='imagenet', include_top=False, input_shape=self.input_shape)
         self.model = Sequential()
-        self.model.add(BatchNormalization(input_shape=self.input_shape))
         self.model.add(self.base_model)
         self.model.add(Flatten())
         self.model.add(Dense(self.output_size, activation='sigmoid'))
@@ -69,13 +68,14 @@ class ImageClassifier:
 
         early_stop = EarlyStopping(patience=2)
         model_checkpoint = ModelCheckpoint(self.__get_weights_path(idx_split), save_best_only=True)
+        reduce_lr = ReduceLROnPlateau(patience=2, cooldown=2)
         tensor_board = MyTensorBoard(log_dir=self.__get_logs_path(idx_split, lr, epochs), write_images=True)
         self.model.fit(x=x,
                        y=y,
                        validation_data=validation_data,
                        batch_size=batch_size,
                        epochs=epochs,
-                       callbacks=[early_stop, model_checkpoint, tensor_board])
+                       callbacks=[early_stop, reduce_lr, model_checkpoint, tensor_board])
 
     def train_generator(self, train_gen, train_size, valid_gen, valid_size, batch_size, lr, decay, epochs, idx_split=0):
         self.model.compile(loss='binary_crossentropy',

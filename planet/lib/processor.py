@@ -1,10 +1,13 @@
 import os
 import cv2
-import random
 
 import numpy as np
 
 from tqdm import tqdm
+
+from keras.preprocessing.image import load_img
+from keras.preprocessing.image import img_to_array
+from keras.applications.vgg19 import preprocess_input
 
 
 class DataProcessor:
@@ -21,32 +24,18 @@ class DataProcessor:
         ys = []
         label_dict = {k: v for v, k in enumerate(labels)}
         for name, tags in tqdm(csv.values):
-            img = cv2.imread(os.path.join(self.root_path, folder_name, '{}.jpg'.format(name)))
-            img = cv2.resize(img, self.input_shape)
+            img = load_img(os.path.join(self.root_path, folder_name, '{}.jpg'.format(name)),
+                           target_size=self.input_shape)
+            img = img_to_array(img)
+            img = preprocess_input(img)
             y = np.zeros(len(labels))
             for t in tags.split(' '):
                 y[label_dict[t]] = 1
             xs.append(img)
             ys.append(y)
 
-            flipped = cv2.flip(img, 1)
-            rows, cols, channel = img.shape
-
-            xs.append(flipped)
-            ys.append(y)
-
-            for rotate_degree in [90, 180, 270]:
-                mat = cv2.getRotationMatrix2D((cols / 2, rows / 2), rotate_degree, 1)
-                dst = cv2.warpAffine(img, mat, (cols, rows))
-                xs.append(dst)
-                ys.append(y)
-
-                dst = cv2.warpAffine(flipped, mat, (cols, rows))
-                xs.append(dst)
-                ys.append(y)
-
-        xs = np.array(xs, np.uint8)
-        ys = np.array(ys, np.uint8)
+        xs = np.array(xs)
+        ys = np.array(ys)
         return xs, ys
 
     @staticmethod
@@ -65,9 +54,12 @@ class DataProcessor:
     def process_test_input(self, csv, folder_name):
         xs = []
         for name, _ in tqdm(csv.values):
-            img = cv2.imread(os.path.join(self.root_path, folder_name, '{}.jpg'.format(name)))
-            xs.append(cv2.resize(img, self.input_shape))
-        xs = np.array(xs, np.uint8)
+            img = load_img(os.path.join(self.root_path, folder_name, '{}.jpg'.format(name)),
+                           target_size=self.input_shape)
+            img = img_to_array(img)
+            img = preprocess_input(img)
+            xs.append(img)
+        xs = np.array(xs)
         return xs
 
     def process_output(self, csv, prediction, output_name, thresholds):
